@@ -11,6 +11,8 @@ import {
   Calendar,
   FileCheck,
   History,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   Employee,
@@ -29,6 +31,8 @@ interface EmployeeFormModalProps {
   initialEmployee?: Employee | null;
   onClose: () => void;
   onSave: (payload: any, id?: number) => Promise<void>;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 type FormTab =
@@ -44,6 +48,8 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   initialEmployee,
   onClose,
   onSave,
+  theme = 'light',
+  onToggleTheme,
 }) => {
   const isEditing = Boolean(initialEmployee?.id);
   const [activeTab, setActiveTab] = useState<FormTab>('basic');
@@ -250,21 +256,21 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col">
       <form onSubmit={handleSubmit} className="min-h-screen w-full flex flex-col">
-        {/* Full-Screen Sticky Header */}
-        <header className="sticky top-0 z-30 px-8 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4 border-b border-slate-800">
+        {/* Full-Screen Sticky Gradient Header */}
+        <header className="sticky top-0 z-30 px-8 py-4 bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white flex flex-wrap items-center justify-between gap-4 border-b border-emerald-800/40 shadow-md">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Roster
             </button>
             <div>
-              <span className="text-xs text-emerald-400 font-mono tabular-nums block">
+              <span className="text-xs text-emerald-300 font-mono tabular-nums block">
                 DEPUTY COMMISSIONER OFFICE JHANG · FULL-SCREEN SERVICE BOOK EDITOR
               </span>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5 text-white">
@@ -276,17 +282,37 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {onToggleTheme && (
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="px-3 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Switch Light / Dark Theme"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Dark</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
             >
               <Save className="w-3.5 h-3.5" />
               {saving
@@ -299,7 +325,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         </header>
 
         {/* Full-Screen Section Tabs */}
-        <div className="sticky top-[73px] z-20 px-8 pt-2 bg-white border-b border-slate-200 flex items-center gap-1 overflow-x-auto">
+        <div className="sticky top-[73px] z-20 px-8 pt-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1 overflow-x-auto">
           {[
             { id: 'basic', label: '1. Basic Information', icon: User },
             { id: 'service', label: '2. Service & Status', icon: Briefcase },

@@ -20,6 +20,9 @@ import {
   RefreshCw,
   Database,
   GitBranch,
+  Sun,
+  Moon,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Employee,
@@ -44,6 +47,32 @@ import {
 type NavView = 'dashboard' | 'employees' | 'acr' | 'leaves' | 'welfare';
 
 export default function App() {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('dc_jhang_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      window.localStorage.setItem('dc_jhang_theme', theme);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  }, []);
+
   const [activeView, setActiveView] = useState<NavView>('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
@@ -90,26 +119,42 @@ export default function App() {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    const targetId = deleteTarget.id;
     try {
-      const updatedList = await deleteEmployeeFromSupabaseOrFallback(deleteTarget.id);
+      // Optimistically remove deleted employee from state immediately
+      setEmployees((prev) => prev.filter((e) => Number(e.id) !== Number(targetId)));
+      const updatedList = await deleteEmployeeFromSupabaseOrFallback(targetId);
       setEmployees(updatedList);
-      if (previewEmployee?.id === deleteTarget.id) setPreviewEmployee(null);
+      if (previewEmployee?.id === targetId) setPreviewEmployee(null);
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
     }
   };
 
+  const normalizeJobCategory = useCallback((status?: string) => {
+    const s = (status || '').trim().toLowerCase();
+    if (s.includes('retired')) return 'Retired (After 60 Years)';
+    if (s.includes('died') || s.includes('death') || s.includes('deceased'))
+      return 'Died During Service';
+    if (s === 'osd' || s.includes('special duty') || s.includes('osd')) return 'OSD';
+    return 'Active';
+  }, []);
+
   const stats = useMemo(() => {
     const total = employees.length;
-    const active = employees.filter((e) => e.jobStatus === 'Active').length;
+    const active = employees.filter(
+      (e) => normalizeJobCategory(e.jobStatus) === 'Active'
+    ).length;
     const retired60 = employees.filter(
-      (e) => e.jobStatus === 'Retired (After 60 Years)'
+      (e) => normalizeJobCategory(e.jobStatus) === 'Retired (After 60 Years)'
     ).length;
     const diedInService = employees.filter(
-      (e) => e.jobStatus === 'Died During Service'
+      (e) => normalizeJobCategory(e.jobStatus) === 'Died During Service'
     ).length;
-    const osd = employees.filter((e) => e.jobStatus === 'OSD').length;
+    const osd = employees.filter(
+      (e) => normalizeJobCategory(e.jobStatus) === 'OSD'
+    ).length;
     const regular = employees.filter((e) => e.employmentStatus === 'Regular').length;
     const contract = employees.filter((e) => e.employmentStatus === 'Contract').length;
     const dailyWages = employees.filter(
@@ -137,11 +182,15 @@ export default function App() {
       totalHeirs,
       totalAcrs,
     };
-  }, [employees]);
+  }, [employees, normalizeJobCategory]);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
-      if (jobStatusFilter !== 'ALL' && emp.jobStatus !== jobStatusFilter) return false;
+      if (
+        jobStatusFilter !== 'ALL' &&
+        normalizeJobCategory(emp.jobStatus) !== jobStatusFilter
+      )
+        return false;
       if (empStatusFilter !== 'ALL' && emp.employmentStatus !== empStatusFilter)
         return false;
       if (tehsilFilter !== 'ALL' && emp.tehsil !== tehsilFilter) return false;
@@ -160,7 +209,15 @@ export default function App() {
       }
       return true;
     });
-  }, [employees, jobStatusFilter, empStatusFilter, tehsilFilter, genderFilter, searchQuery]);
+  }, [
+    employees,
+    jobStatusFilter,
+    empStatusFilter,
+    tehsilFilter,
+    genderFilter,
+    searchQuery,
+    normalizeJobCategory,
+  ]);
 
   const handleExportCsv = () => {
     const headers = [
@@ -221,6 +278,8 @@ export default function App() {
           setEditingEmployee(null);
         }}
         onSave={handleSaveEmployee}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -235,26 +294,33 @@ export default function App() {
           setEditingEmployee(emp);
           setIsFormOpen(true);
         }}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       {/* 3-Zone Top Bar Contract */}
-      <header className="flex items-center justify-between gap-8 px-6 py-3.5 bg-white border-b border-slate-200 no-print">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 no-print">
         <a
           href="#dashboard"
           onClick={(e) => {
             e.preventDefault();
             setActiveView('dashboard');
           }}
-          className="text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
+          className="flex items-center gap-2.5 text-lg font-bold tracking-tight whitespace-nowrap shrink-0"
         >
-          DC Office Jhang HRMS
+          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 via-teal-600 to-slate-900 text-white flex items-center justify-center shadow-xs">
+            <ShieldCheck className="w-4 h-4" />
+          </span>
+          <span className="bg-gradient-to-r from-emerald-800 via-teal-700 to-slate-900 dark:from-emerald-400 dark:via-teal-300 dark:to-white bg-clip-text text-transparent">
+            DC Office Jhang HRMS
+          </span>
         </a>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           {[
             { id: 'dashboard', label: 'Dashboard' },
             { id: 'employees', label: 'Employee Roster' },
@@ -271,8 +337,8 @@ export default function App() {
               }}
               className={`transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
                 activeView === item.id
-                  ? 'text-emerald-800 border-emerald-700 font-semibold'
-                  : 'text-slate-600 border-transparent hover:text-slate-900'
+                  ? 'text-emerald-700 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400 font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
               {item.label}
@@ -280,13 +346,33 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label="Toggle Light or Dark Theme"
+            className="px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Light Mode</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-slate-700" />
+                <span>Dark Mode</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               setEditingEmployee(null);
               setIsFormOpen(true);
             }}
-            className="px-4 py-2 text-xs font-medium text-white bg-emerald-800 rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 rounded-lg transition-all shadow-xs whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             Add Employee
@@ -295,39 +381,41 @@ export default function App() {
       </header>
 
       {/* Workspace Sub-Toolbar */}
-      <div className="bg-slate-100 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600 no-print">
+      <div className="bg-gradient-to-r from-slate-100 via-emerald-50/40 to-slate-100 dark:from-slate-900 dark:via-emerald-950/30 dark:to-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600 dark:text-slate-400 no-print">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
             Office of the Deputy Commissioner, District Jhang
           </span>
           <span aria-hidden="true">·</span>
           <span>Establishment, Revenue &amp; Ministerial Cadre</span>
           <span aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums">Supabase Project: qjoflyaxwffwzoodehod</span>
+          <span className="font-mono tabular-nums text-emerald-800 dark:text-emerald-400">
+            Supabase DB: qjoflyaxwffwzoodehod
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setIsGhModalOpen(true)}
-            className="px-2.5 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-md hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer"
+            className="px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors"
           >
-            <GitBranch className="w-3.5 h-3.5 text-slate-700" />
+            <GitBranch className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             <span>GitHub Pages Auto-Deploy</span>
           </button>
           <button
             type="button"
             onClick={() => setIsSchemaModalOpen(true)}
-            className="px-2.5 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-md hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer"
+            className="px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Database className="w-3.5 h-3.5 text-emerald-700" />
+            <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Supabase SQL Tables</span>
           </button>
           <button
             type="button"
             onClick={loadData}
             disabled={loadingData}
-            className="text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+            className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
             <span>Sync</span>
@@ -374,137 +462,163 @@ export default function App() {
           <>
             {activeView === 'dashboard' && (
               <div className="space-y-6">
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                      District Establishment Overview
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Live sanctioned strength, active deployment, superannuation (60 years age), in-service demise, and OSD roster across District Jhang.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setJobStatusFilter('ALL');
-                        setActiveView('employees');
-                      }}
-                      className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
-                    >
-                      Open Full Directory
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportCsv}
-                      className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Export CSV Roster
-                    </button>
+                {/* Gradient Hero Banner */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white p-6 sm:p-8 border border-emerald-800/40 shadow-md">
+                  <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-mono uppercase tracking-wider text-emerald-300">
+                        District Establishment &amp; Human Resource Directorate · Jhang
+                      </div>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
+                        Deputy Commissioner Office Jhang — HR Portal
+                      </h1>
+                      <p className="text-xs sm:text-sm text-emerald-100/85 mt-1.5 max-w-2xl">
+                        Real-time sanctioned strength, active deployment, superannuation after 60 years of age, in-service demise &amp; legal heirs, and OSD officers across District Jhang.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJobStatusFilter('ALL');
+                          setActiveView('employees');
+                        }}
+                        className="px-4 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Open Full Directory
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportCsv}
+                        className="px-4 py-2 text-xs font-semibold text-slate-950 bg-gradient-to-r from-emerald-300 to-teal-200 hover:from-emerald-200 hover:to-teal-100 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV Roster
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* 5 Mandatory Executive Summary Cards */}
+                {/* 5 Gradient Executive Summary Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* Card 1: Total Employees */}
                   <button
                     type="button"
                     onClick={() => {
                       setJobStatusFilter('ALL');
                       setActiveView('employees');
                     }}
-                    className="text-left bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-400 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden text-left bg-gradient-to-br from-white via-slate-50/70 to-indigo-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-indigo-500/60 transition-all shadow-xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-xs font-medium">Total Employees</span>
-                      <Users className="w-4 h-4 text-slate-400" />
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-slate-700 via-indigo-600 to-emerald-600" />
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold">Total Employees</span>
+                      <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                        <Users className="w-4 h-4" />
+                      </span>
                     </div>
-                    <div className="text-3xl font-bold font-mono tabular-nums text-slate-900 mt-3">
+                    <div className="text-3xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-3">
                       {stats.total}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       {stats.regular} Regular · {stats.contract} Contract · {stats.dailyWages} DW
                     </div>
                   </button>
 
+                  {/* Card 2: Active Employees */}
                   <button
                     type="button"
                     onClick={() => {
                       setJobStatusFilter('Active');
                       setActiveView('employees');
                     }}
-                    className="text-left bg-white border border-slate-200 rounded-xl p-5 hover:border-emerald-600 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden text-left bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/50 dark:from-slate-900 dark:via-emerald-950/30 dark:to-teal-950/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-emerald-500/60 transition-all shadow-xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-xs font-medium">Active Employees</span>
-                      <UserCheck className="w-4 h-4 text-emerald-700" />
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold">Active Employees</span>
+                      <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <UserCheck className="w-4 h-4" />
+                      </span>
                     </div>
-                    <div className="text-3xl font-bold font-mono tabular-nums text-emerald-700 mt-3">
+                    <div className="text-3xl font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400 mt-3">
                       {stats.active}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       Serving across DC Complex &amp; 4 Tehsils
                     </div>
                   </button>
 
+                  {/* Card 3: Retired After 60 Years */}
                   <button
                     type="button"
                     onClick={() => {
                       setJobStatusFilter('Retired (After 60 Years)');
                       setActiveView('employees');
                     }}
-                    className="text-left bg-white border border-slate-200 rounded-xl p-5 hover:border-amber-600 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden text-left bg-gradient-to-br from-white via-amber-50/40 to-orange-50/50 dark:from-slate-900 dark:via-amber-950/30 dark:to-orange-950/30 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-amber-500/60 transition-all shadow-xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-xs font-medium">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold">
                         Retired (After 60 Years)
                       </span>
-                      <Award className="w-4 h-4 text-amber-600" />
+                      <span className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <Award className="w-4 h-4" />
+                      </span>
                     </div>
-                    <div className="text-3xl font-bold font-mono tabular-nums text-amber-700 mt-3">
+                    <div className="text-3xl font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400 mt-3">
                       {stats.retired60}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       Superannuated at 60 years age
                     </div>
                   </button>
 
+                  {/* Card 4: Died During Service */}
                   <button
                     type="button"
                     onClick={() => {
                       setJobStatusFilter('Died During Service');
                       setActiveView('employees');
                     }}
-                    className="text-left bg-white border border-slate-200 rounded-xl p-5 hover:border-red-600 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden text-left bg-gradient-to-br from-white via-rose-50/40 to-red-50/50 dark:from-slate-900 dark:via-rose-950/30 dark:to-red-950/30 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-rose-500/60 transition-all shadow-xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-xs font-medium">Died During Service</span>
-                      <HeartCrack className="w-4 h-4 text-red-600" />
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold">Died During Service</span>
+                      <span className="p-2 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        <HeartCrack className="w-4 h-4" />
+                      </span>
                     </div>
-                    <div className="text-3xl font-bold font-mono tabular-nums text-red-700 mt-3">
+                    <div className="text-3xl font-bold font-mono tabular-nums text-rose-700 dark:text-rose-400 mt-3">
                       {stats.diedInService}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       Family Pension &amp; Rule 17-A Cases
                     </div>
                   </button>
 
+                  {/* Card 5: OSD */}
                   <button
                     type="button"
                     onClick={() => {
                       setJobStatusFilter('OSD');
                       setActiveView('employees');
                     }}
-                    className="text-left bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-600 transition-colors cursor-pointer"
+                    className="group relative overflow-hidden text-left bg-gradient-to-br from-white via-sky-50/40 to-indigo-50/50 dark:from-slate-900 dark:via-sky-950/30 dark:to-indigo-950/30 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-sky-500/60 transition-all shadow-xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-xs font-medium">OSD Officers / Staff</span>
-                      <Briefcase className="w-4 h-4 text-blue-600" />
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 to-indigo-600" />
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold">OSD Officers / Staff</span>
+                      <span className="p-2 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                        <Briefcase className="w-4 h-4" />
+                      </span>
                     </div>
-                    <div className="text-3xl font-bold font-mono tabular-nums text-blue-700 mt-3">
+                    <div className="text-3xl font-bold font-mono tabular-nums text-sky-700 dark:text-sky-400 mt-3">
                       {stats.osd}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       Establishment Pool / Awaiting Posting
                     </div>
                   </button>
@@ -512,17 +626,17 @@ export default function App() {
 
                 {/* Tehsil & Cadre Breakdown */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                  <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                       <div>
-                        <h2 className="text-base font-semibold text-slate-900">
+                        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
                           Tehsil &amp; Branch Deployment Matrix
                         </h2>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Staff across DC Office Jhang Headquarters and Tehsil AC Offices
                         </p>
                       </div>
-                      <Building2 className="w-4 h-4 text-slate-400" />
+                      <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -537,12 +651,12 @@ export default function App() {
                                 setTehsilFilter(teh);
                                 setActiveView('employees');
                               }}
-                              className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-left hover:border-slate-400 cursor-pointer"
+                              className="p-4 bg-gradient-to-br from-slate-50 to-emerald-50/40 dark:from-slate-800/80 dark:to-emerald-950/20 border border-slate-200 dark:border-slate-700/80 rounded-xl text-left hover:border-emerald-500 transition-all cursor-pointer"
                             >
-                              <div className="text-xs font-medium text-slate-600">
+                              <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
                                 Tehsil {teh}
                               </div>
-                              <div className="text-xl font-bold font-mono tabular-nums text-slate-900 mt-1">
+                              <div className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-1.5">
                                 {count}
                               </div>
                             </button>
@@ -552,43 +666,45 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-3 text-xs">
-                    <h2 className="text-base font-semibold text-slate-900 border-b border-slate-200 pb-3">
+                  <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-3 text-xs shadow-xs">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-3">
                       Service Terms &amp; Dossier Summary
                     </h2>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-600">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-600 dark:text-slate-400">
                         Regular Staff (With Regularization Date)
                       </span>
-                      <span className="font-mono tabular-nums font-semibold">
+                      <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
                         {stats.regular}
                       </span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-600">Contract Staff</span>
-                      <span className="font-mono tabular-nums font-semibold">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-600 dark:text-slate-400">Contract Staff</span>
+                      <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
                         {stats.contract}
                       </span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-600">Daily Wages / Contingent</span>
-                      <span className="font-mono tabular-nums font-semibold">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        Daily Wages / Contingent
+                      </span>
+                      <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
                         {stats.dailyWages}
                       </span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-600">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-600 dark:text-slate-400">
                         Female Staff (With Husband/Father Name)
                       </span>
-                      <span className="font-mono tabular-nums font-semibold">
+                      <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
                         {stats.femaleStaff}
                       </span>
                     </div>
                     <div className="flex justify-between py-1.5">
-                      <span className="text-slate-600">
+                      <span className="text-slate-600 dark:text-slate-400">
                         Legal Heirs &amp; ACR Reports Logged
                       </span>
-                      <span className="font-mono tabular-nums font-semibold text-emerald-800">
+                      <span className="font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
                         {stats.totalHeirs} Heirs · {stats.totalAcrs} ACRs
                       </span>
                     </div>
@@ -598,10 +714,10 @@ export default function App() {
             )}
 
             {/* Employee Roster & Filter Bar */}
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-slate-200 space-y-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg overflow-x-auto">
+                  <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-x-auto">
                     {[
                       { value: 'ALL', label: `All (${employees.length})` },
                       { value: 'Active', label: `Active (${stats.active})` },
@@ -619,10 +735,10 @@ export default function App() {
                         key={tab.value}
                         type="button"
                         onClick={() => setJobStatusFilter(tab.value)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                           jobStatusFilter === tab.value
-                            ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs font-semibold'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         {tab.label}
@@ -638,13 +754,13 @@ export default function App() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search Name, Father/Husband, CNIC, Post..."
-                        className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg w-64"
+                        className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg w-64 bg-white dark:bg-slate-800"
                       />
                     </div>
                     <select
                       value={empStatusFilter}
                       onChange={(e) => setEmpStatusFilter(e.target.value)}
-                      className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                      className="px-2.5 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                     >
                       <option value="ALL">All Recruitment Modes</option>
                       <option value="Regular">Regular</option>
@@ -654,7 +770,7 @@ export default function App() {
                     <select
                       value={genderFilter}
                       onChange={(e) => setGenderFilter(e.target.value)}
-                      className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                      className="px-2.5 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                     >
                       <option value="ALL">All Genders</option>
                       <option value="Male">Male</option>
@@ -667,33 +783,48 @@ export default function App() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                      <th className="py-3 px-4 font-semibold">
+                    <tr className="bg-slate-50/90 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                      <th className="py-3.5 px-4 font-semibold">
                         Employee Name, Father / Husband &amp; CNIC
                       </th>
-                      <th className="py-3 px-4 font-semibold">Designation &amp; Branch</th>
-                      <th className="py-3 px-4 font-semibold">
+                      <th className="py-3.5 px-4 font-semibold">Designation &amp; Branch</th>
+                      <th className="py-3.5 px-4 font-semibold">
                         Recruitment &amp; Regularization
                       </th>
-                      <th className="py-3 px-4 font-semibold">
+                      <th className="py-3.5 px-4 font-semibold">
                         Job Status, Retirement (60Y) / Death Date
                       </th>
-                      <th className="py-3 px-4 font-semibold">
+                      <th className="py-3.5 px-4 font-semibold">
                         Heirs, Academics, Leave &amp; ACRs
                       </th>
-                      <th className="py-3 px-4 font-semibold text-right">
+                      <th className="py-3.5 px-4 font-semibold text-right">
                         Preview / Edit / Delete
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {filteredEmployees.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="py-12 px-6 text-center text-xs text-slate-500 dark:text-slate-400"
+                        >
+                          {employees.length === 0
+                            ? 'No employee records in the database (0 employees). Click "+ Add Employee" in the top bar to register a new employee.'
+                            : 'No employees match the selected search or filter criteria.'}
+                        </td>
+                      </tr>
+                    ) : null}
                     {filteredEmployees.map((emp) => (
-                      <tr key={emp.id} className="hover:bg-slate-50/90">
+                      <tr
+                        key={emp.id}
+                        className="hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition-colors"
+                      >
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900 text-sm">
+                          <div className="font-semibold text-slate-900 dark:text-white text-sm">
                             {emp.name}
                           </div>
-                          <div className="text-slate-600 mt-0.5">
+                          <div className="text-slate-600 dark:text-slate-300 mt-0.5">
                             Father: <span className="font-medium">{emp.fatherName}</span>
                             {emp.gender === 'Female' &&
                             emp.husbandName &&
@@ -701,36 +832,38 @@ export default function App() {
                               <>
                                 {' '}
                                 · Husband:{' '}
-                                <span className="font-medium text-emerald-800">
+                                <span className="font-medium text-emerald-700 dark:text-emerald-400">
                                   {emp.husbandName}
                                 </span>
                               </>
                             ) : null}
                           </div>
-                          <div className="text-slate-500 font-mono tabular-nums mt-0.5">
+                          <div className="text-slate-500 dark:text-slate-400 font-mono tabular-nums mt-0.5">
                             {emp.personnelNumber} · {emp.cnic} · {emp.gender} ·{' '}
                             {calculateAgeYears(emp.dateOfBirth)} yrs
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900">
+                          <div className="font-semibold text-slate-900 dark:text-white">
                             {emp.designation} ({emp.bps})
                           </div>
-                          <div className="text-slate-600 mt-0.5">{emp.branch}</div>
-                          <div className="text-slate-500 mt-0.5">
+                          <div className="text-slate-600 dark:text-slate-300 mt-0.5">
+                            {emp.branch}
+                          </div>
+                          <div className="text-slate-500 dark:text-slate-400 mt-0.5">
                             Tehsil {emp.tehsil} · {emp.phone}
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4 font-mono tabular-nums">
-                          <div className="font-semibold text-slate-900">
+                          <div className="font-semibold text-slate-900 dark:text-white">
                             {emp.employmentStatus}
                           </div>
-                          <div className="text-slate-600 mt-0.5">
+                          <div className="text-slate-600 dark:text-slate-300 mt-0.5">
                             Recruited: {emp.dateOfRecruitment}
                           </div>
-                          <div className="text-slate-500 mt-0.5">
+                          <div className="text-slate-500 dark:text-slate-400 mt-0.5">
                             {emp.employmentStatus === 'Regular'
                               ? `Regularized: ${
                                   emp.dateOfRegularization || emp.dateOfRecruitment
@@ -743,27 +876,27 @@ export default function App() {
                           <div
                             className={`font-semibold ${
                               emp.jobStatus === 'Active'
-                                ? 'text-emerald-700'
+                                ? 'text-emerald-700 dark:text-emerald-400'
                                 : emp.jobStatus === 'Retired (After 60 Years)'
-                                ? 'text-amber-700'
+                                ? 'text-amber-700 dark:text-amber-400'
                                 : emp.jobStatus === 'Died During Service'
-                                ? 'text-red-700'
-                                : 'text-blue-700'
+                                ? 'text-rose-700 dark:text-rose-400'
+                                : 'text-sky-700 dark:text-sky-400'
                             }`}
                           >
                             {emp.jobStatus}
                           </div>
-                          <div className="text-slate-600 font-mono tabular-nums mt-0.5">
+                          <div className="text-slate-600 dark:text-slate-300 font-mono tabular-nums mt-0.5">
                             {emp.jobStatus === 'Died During Service'
                               ? `Date of Death: ${emp.dateOfDeath || 'Recorded'}`
                               : `Retirement (60y): ${emp.dateOfRetirement || '—'}`}
                           </div>
-                          <div className="text-slate-500 mt-0.5">
+                          <div className="text-slate-500 dark:text-slate-400 mt-0.5">
                             {emp.pensionStatus || 'In-Service'}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4 font-mono tabular-nums text-slate-600">
+                        <td className="py-3.5 px-4 font-mono tabular-nums text-slate-600 dark:text-slate-300">
                           <div>
                             Heirs: {emp.legalHeirs?.length || 0} · Degrees:{' '}
                             {emp.academicRecords?.length || 0}
@@ -781,7 +914,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setPreviewEmployee(emp)}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer shadow-xs transition-all"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               Profile Preview
@@ -792,7 +925,7 @@ export default function App() {
                                 setEditingEmployee(emp);
                                 setIsFormOpen(true);
                               }}
-                              className="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                              className="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer transition-colors"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                               Edit
@@ -800,7 +933,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(emp)}
-                              className="px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                              className="px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               Delete
@@ -817,7 +950,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="px-6 py-4 bg-white border-t border-slate-200 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-4 no-print mt-auto">
+      <footer className="px-6 py-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-4 no-print mt-auto">
         <div>
           Office of the Deputy Commissioner, District Jhang · Human Resource &amp; Service Book Management System
         </div>
@@ -839,14 +972,17 @@ export default function App() {
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-          <div className="bg-white border border-slate-200 rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
               Confirm Deletion of Service Dossier
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               Are you sure you want to permanently remove the personnel record for{' '}
-              <span className="font-semibold text-slate-900">{deleteTarget.name}</span> (
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {deleteTarget.name}
+              </span>{' '}
+              (
               <span className="font-mono tabular-nums">
                 {deleteTarget.personnelNumber}
               </span>
@@ -857,7 +993,7 @@ export default function App() {
                 type="button"
                 disabled={deleting}
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
               >
                 Cancel
               </button>
@@ -865,7 +1001,7 @@ export default function App() {
                 type="button"
                 disabled={deleting}
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg cursor-pointer"
+                className="px-4 py-2 text-xs font-medium text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 disabled:opacity-50 rounded-lg cursor-pointer"
               >
                 {deleting ? 'Deleting...' : 'Confirm Delete'}
               </button>

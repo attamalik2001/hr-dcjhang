@@ -10,6 +10,8 @@ import {
   Calendar,
   FileCheck,
   History,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   Employee,
@@ -21,6 +23,8 @@ interface EmployeeProfileModalProps {
   employee: Employee;
   onClose: () => void;
   onEdit: (emp: Employee) => void;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 type ProfileSection =
@@ -35,6 +39,8 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
   employee,
   onClose,
   onEdit,
+  theme = 'light',
+  onToggleTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileSection>('overview');
 
@@ -59,28 +65,28 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col">
       <div className="w-full flex-1 flex flex-col">
-        {/* Full-Screen Sticky Header */}
-        <header className="sticky top-0 z-30 px-8 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4 border-b border-slate-800">
+        {/* Full-Screen Sticky Gradient Header */}
+        <header className="sticky top-0 z-30 px-8 py-4 bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white flex flex-wrap items-center justify-between gap-4 border-b border-emerald-800/40 shadow-md">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer no-print"
+              className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer no-print"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Roster
             </button>
             <div>
-              <div className="text-xs text-emerald-400 font-mono tabular-nums">
+              <div className="text-xs text-emerald-300 font-mono tabular-nums">
                 OFFICE OF THE DEPUTY COMMISSIONER, JHANG · SERVICE BOOK DOSSIER ·{' '}
                 {employee.personnelNumber}
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-0.5">
                 {employee.name}
               </h1>
-              <div className="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-2">
+              <div className="text-xs text-emerald-100/90 mt-1 flex flex-wrap items-center gap-2">
                 <span>{employee.designation}</span>
                 <span aria-hidden="true">·</span>
                 <span className="font-mono tabular-nums">{employee.bps}</span>
@@ -93,10 +99,30 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 no-print shrink-0">
+            {onToggleTheme && (
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="px-3 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Switch Light / Dark Theme"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Dark</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={handlePrint}
-              className="px-4 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               Print Service Sheet
@@ -104,7 +130,7 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
             <button
               type="button"
               onClick={() => onEdit(employee)}
-              className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
             >
               <Edit3 className="w-3.5 h-3.5" />
               Edit Employee in Full Screen
@@ -113,7 +139,7 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
         </header>
 
         {/* Summary Strip */}
-        <div className="px-8 py-3.5 bg-white border-b border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs shrink-0">
+        <div className="px-8 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs shrink-0">
           <div>
             <span className="text-slate-500 block">Status of Job</span>
             <span
