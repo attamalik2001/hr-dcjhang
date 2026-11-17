@@ -1,0 +1,6 @@
+{
+  "name": "DC Office Jhang HRMS",
+  "description": "Comprehensive Human Resource Management System for the Office of the Deputy Commissioner, District Jhang — managing personnel records, service books, superannuation, OSD roster, legal heirs, leave accounts, and ACR/PER dossiers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
