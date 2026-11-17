@@ -59,16 +59,16 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-xl">
-        {/* Top Modal Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-white flex flex-col overflow-hidden">
+      <div className="bg-white w-full h-full flex flex-col overflow-hidden">
+        {/* Full-Screen Top Header */}
+        <div className="px-8 py-4 bg-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
           <div>
             <div className="text-xs text-slate-300 font-mono tabular-nums">
               OFFICE OF THE DEPUTY COMMISSIONER, JHANG · SERVICE BOOK DOSSIER ·{' '}
               {employee.personnelNumber}
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white mt-0.5">
+            <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
               {employee.name}
             </h2>
             <div className="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-2">
@@ -82,17 +82,17 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 no-print shrink-0">
+          <div className="flex items-center gap-2.5 no-print shrink-0">
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               Print Service Sheet
             </button>
             <button
               onClick={() => onEdit(employee)}
-              className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-600 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-600 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
               Edit Dossier
@@ -100,15 +100,16 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Close profile preview"
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-red-700 hover:text-white rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              Close Full Screen
             </button>
           </div>
         </div>
 
         {/* Summary Strip */}
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs shrink-0">
+        <div className="px-8 py-3.5 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs shrink-0">
           <div>
             <span className="text-slate-500 block">Status of Job</span>
             <span
@@ -162,7 +163,7 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="px-6 pt-2 bg-white border-b border-slate-200 flex items-center gap-1 overflow-x-auto no-print shrink-0">
+        <div className="px-8 pt-2 bg-white border-b border-slate-200 flex items-center gap-1 overflow-x-auto no-print shrink-0">
           {[
             { id: 'overview', label: 'Basic & Service Info', icon: User },
             {
@@ -211,7 +212,7 @@ export const EmployeeProfileModal: React.FC<EmployeeProfileModalProps> = ({
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="p-6 overflow-y-auto space-y-8 flex-1">
+        <div className="px-8 py-6 overflow-y-auto space-y-8 flex-1">
           {(activeTab === 'overview' || typeof window !== 'undefined') && (
             <div className={activeTab === 'overview' ? 'space-y-8' : 'hidden print:block space-y-8'}>
               {/* Section 1: Basic Personal Information */}
