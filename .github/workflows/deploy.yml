@@ -16,6 +16,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,8 +31,40 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Normalize package.json for public npm registry & Install dependencies
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = {
+              name: "hr-dcjhang",
+              private: true,
+              version: "1.0.0",
+              type: "module",
+              scripts: {
+                dev: "vite --port=3000 --host=0.0.0.0",
+                build: "vite build",
+                preview: "vite preview"
+              },
+              dependencies: {
+                "@supabase/supabase-js": "^2.45.0",
+                "@tailwindcss/vite": "^4.0.0",
+                "@vitejs/plugin-react": "^4.3.0",
+                "lucide-react": "^0.460.0",
+                "react": "^19.0.0",
+                "react-dom": "^19.0.0",
+                "tailwindcss": "^4.0.0",
+                "vite": "^6.0.0"
+              },
+              devDependencies: {
+                "@types/node": "^22.0.0",
+                "@types/react": "^19.0.0",
+                "@types/react-dom": "^19.0.0",
+                "typescript": "^5.7.0"
+              }
+            };
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
+          npm install --legacy-peer-deps
 
       - name: Build static production bundle for GitHub Pages
         env:

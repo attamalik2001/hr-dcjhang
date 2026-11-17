@@ -23,6 +23,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,8 +38,40 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Normalize package.json for public npm registry & Install dependencies
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = {
+              name: "hr-dcjhang",
+              private: true,
+              version: "1.0.0",
+              type: "module",
+              scripts: {
+                dev: "vite --port=3000 --host=0.0.0.0",
+                build: "vite build",
+                preview: "vite preview"
+              },
+              dependencies: {
+                "@supabase/supabase-js": "^2.45.0",
+                "@tailwindcss/vite": "^4.0.0",
+                "@vitejs/plugin-react": "^4.3.0",
+                "lucide-react": "^0.460.0",
+                "react": "^19.0.0",
+                "react-dom": "^19.0.0",
+                "tailwindcss": "^4.0.0",
+                "vite": "^6.0.0"
+              },
+              devDependencies: {
+                "@types/node": "^22.0.0",
+                "@types/react": "^19.0.0",
+                "@types/react-dom": "^19.0.0",
+                "typescript": "^5.7.0"
+              }
+            };
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
+          npm install --legacy-peer-deps
 
       - name: Build static production bundle for GitHub Pages
         env:
@@ -107,22 +142,16 @@ export const GitHubPagesModal: React.FC<GitHubPagesModalProps> = ({ onClose }) =
             </div>
             <ol className="list-decimal list-inside space-y-1.5 leading-relaxed">
               <li>
-                <strong>Workflow Included:</strong> The file{' '}
+                <strong>Public NPM Normalization Included:</strong> The updated{' '}
                 <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200">
                   .github/workflows/deploy.yml
                 </code>{' '}
-                and relative asset paths (<code className="font-mono">base: &apos;./&apos;</code> + SPA <code className="font-mono">404.html</code> + <code className="font-mono">.nojekyll</code>) are already configured in this project.
+                automatically normalizes AI Studio sandbox package versions to public npm versions on GitHub Actions runners and enables Node 24 compatibility.
               </li>
               <li>
-                <strong>Connect / Push to GitHub:</strong> Export or push this repository to your GitHub account (<code className="font-mono">main</code> or <code className="font-mono">master</code> branch).
-              </li>
-              <li>
-                <strong>Enable GitHub Actions Source (One-Time):</strong> In your GitHub repository, open{' '}
+                <strong>Enable GitHub Actions Source:</strong> In your GitHub repository (<code className="font-mono">hr-dcjhang</code>), open{' '}
                 <strong>Settings &rarr; Pages &rarr; Build and deployment</strong> and set{' '}
                 <strong>Source</strong> to <strong>GitHub Actions</strong>.
-              </li>
-              <li>
-                <strong>Auto-Publish on Every Push:</strong> Every time you push new changes to <code className="font-mono">main</code>/<code className="font-mono">master</code>, GitHub Actions will automatically compile the Vite app with your Supabase connection and publish the updated site to your GitHub Pages URL.
               </li>
             </ol>
           </div>
