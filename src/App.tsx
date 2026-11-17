@@ -19,6 +19,7 @@ import {
   Building2,
   RefreshCw,
   Database,
+  GitBranch,
 } from 'lucide-react';
 import {
   Employee,
@@ -33,6 +34,7 @@ import {
 import { EmployeeProfileModal } from './components/EmployeeProfileModal';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
 import { SupabaseSchemaModal } from './components/SupabaseSchemaModal';
+import { GitHubPagesModal } from './components/GitHubPagesModal';
 import {
   AcrMatrixView,
   LeaveAccountsView,
@@ -59,6 +61,7 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [isSchemaModalOpen, setIsSchemaModalOpen] = useState<boolean>(false);
+  const [isGhModalOpen, setIsGhModalOpen] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
     setLoadingData(true);
@@ -277,6 +280,14 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsGhModalOpen(true)}
+            className="px-2.5 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-md hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer"
+          >
+            <GitBranch className="w-3.5 h-3.5 text-slate-700" />
+            <span>GitHub Pages Auto-Deploy</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsSchemaModalOpen(true)}
@@ -817,6 +828,10 @@ export default function App() {
           onClose={() => setIsSchemaModalOpen(false)}
           onRefreshConnection={loadData}
         />
+      )}
+
+      {isGhModalOpen && (
+        <GitHubPagesModal onClose={() => setIsGhModalOpen(false)} />
       )}
 
       {deleteTarget && (
