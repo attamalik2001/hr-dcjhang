@@ -212,6 +212,33 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  if (isFormOpen) {
+    return (
+      <EmployeeFormModal
+        initialEmployee={editingEmployee}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingEmployee(null);
+        }}
+        onSave={handleSaveEmployee}
+      />
+    );
+  }
+
+  if (previewEmployee) {
+    return (
+      <EmployeeProfileModal
+        employee={previewEmployee}
+        onClose={() => setPreviewEmployee(null)}
+        onEdit={(emp) => {
+          setPreviewEmployee(null);
+          setEditingEmployee(emp);
+          setIsFormOpen(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* 3-Zone Top Bar Contract */}
@@ -798,29 +825,6 @@ export default function App() {
           Establishment Branch · HRA Branch · Revenue Wing · Tehsils Jhang, Shorkot, Ahmadpur Sial &amp; 18-Hazari
         </div>
       </footer>
-
-      {previewEmployee && (
-        <EmployeeProfileModal
-          employee={previewEmployee}
-          onClose={() => setPreviewEmployee(null)}
-          onEdit={(emp) => {
-            setPreviewEmployee(null);
-            setEditingEmployee(emp);
-            setIsFormOpen(true);
-          }}
-        />
-      )}
-
-      {isFormOpen && (
-        <EmployeeFormModal
-          initialEmployee={editingEmployee}
-          onClose={() => {
-            setIsFormOpen(false);
-            setEditingEmployee(null);
-          }}
-          onSave={handleSaveEmployee}
-        />
-      )}
 
       {isSchemaModalOpen && (
         <SupabaseSchemaModal

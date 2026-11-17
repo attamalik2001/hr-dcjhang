@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  X,
+  ArrowLeft,
   Plus,
   Trash2,
   Save,
@@ -250,31 +250,56 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-xl">
-        {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
-          <div>
-            <span className="text-xs text-slate-300 font-mono tabular-nums block">
-              DEPUTY COMMISSIONER OFFICE JHANG · ESTABLISHMENT RECORD ENTRY
-            </span>
-            <h2 className="text-lg font-bold tracking-tight">
-              {isEditing
-                ? `Edit Employee Service Dossier — ${initialEmployee?.name}`
-                : 'Register New District Establishment Employee'}
-            </h2>
+    <div className="min-h-screen w-full bg-slate-50 flex flex-col">
+      <form onSubmit={handleSubmit} className="min-h-screen w-full flex flex-col">
+        {/* Full-Screen Sticky Header */}
+        <header className="sticky top-0 z-30 px-8 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4 border-b border-slate-800">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Roster
+            </button>
+            <div>
+              <span className="text-xs text-emerald-400 font-mono tabular-nums block">
+                DEPUTY COMMISSIONER OFFICE JHANG · FULL-SCREEN SERVICE BOOK EDITOR
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5 text-white">
+                {isEditing
+                  ? `Edit Employee Service Dossier — ${initialEmployee?.name}`
+                  : 'Add New District Establishment Employee'}
+              </h1>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Section Tabs */}
-        <div className="px-6 pt-2 bg-slate-50 border-b border-slate-200 flex items-center gap-1 overflow-x-auto shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {saving
+                ? 'Saving Record...'
+                : isEditing
+                ? 'Update Employee Record'
+                : 'Save Employee Record'}
+            </button>
+          </div>
+        </header>
+
+        {/* Full-Screen Section Tabs */}
+        <div className="sticky top-[73px] z-20 px-8 pt-2 bg-white border-b border-slate-200 flex items-center gap-1 overflow-x-auto">
           {[
             { id: 'basic', label: '1. Basic Information', icon: User },
             { id: 'service', label: '2. Service & Status', icon: Briefcase },
@@ -311,9 +336,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as FormTab)}
-                className={`px-3 py-2.5 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`px-4 py-3 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   active
-                    ? 'border-emerald-700 text-emerald-800 bg-white font-semibold'
+                    ? 'border-emerald-700 text-emerald-800 bg-emerald-50/40 font-semibold'
                     : 'border-transparent text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -324,13 +349,14 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           })}
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          {formError && (
-            <div className="p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 font-medium">
-              {formError}
-            </div>
-          )}
+        {/* Full-Screen Form Body */}
+        <div className="flex-1 w-full max-w-[1440px] mx-auto px-8 py-8 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs space-y-6">
+            {formError && (
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 font-medium">
+                {formError}
+              </div>
+            )}
 
           {/* TAB 1: BASIC INFORMATION */}
           {activeTab === 'basic' && (
@@ -1797,35 +1823,36 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             </div>
           )}
 
-          {/* Modal Footer Actions */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-4">
-            <div className="text-xs text-slate-500">
-              All changes are saved directly to the District Establishment Database.
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-5 py-2 text-xs font-medium text-white bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {saving
-                  ? 'Saving Record...'
-                  : isEditing
-                  ? 'Update Employee Record'
-                  : 'Save Employee Record'}
-              </button>
+            {/* Full-Screen Footer Actions */}
+            <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+              <div className="text-xs text-slate-500">
+                All changes are saved directly to the District Establishment Database (Supabase).
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  Back to Roster
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2.5 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {saving
+                    ? 'Saving Record...'
+                    : isEditing
+                    ? 'Update Employee Record'
+                    : 'Save Employee Record'}
+                </button>
+              </div>
             </div>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };
