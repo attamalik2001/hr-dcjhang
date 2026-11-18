@@ -17,9 +17,6 @@ import {
   HeartCrack,
   Briefcase,
   Building2,
-  RefreshCw,
-  Database,
-  GitBranch,
   Sun,
   Moon,
   ShieldCheck,
@@ -36,8 +33,6 @@ import {
 } from './services/supabaseHrService';
 import { EmployeeProfileModal } from './components/EmployeeProfileModal';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
-import { SupabaseSchemaModal } from './components/SupabaseSchemaModal';
-import { GitHubPagesModal } from './components/GitHubPagesModal';
 import {
   AcrMatrixView,
   LeaveAccountsView,
@@ -75,8 +70,6 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<NavView>('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [needsTableSetup, setNeedsTableSetup] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [jobStatusFilter, setJobStatusFilter] = useState<string>('ALL');
@@ -89,18 +82,10 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
-  const [isSchemaModalOpen, setIsSchemaModalOpen] = useState<boolean>(false);
-  const [isGhModalOpen, setIsGhModalOpen] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
-    setLoadingData(true);
-    try {
-      const result = await fetchAllEmployeesFromSupabase();
-      setEmployees(result.employees);
-      setNeedsTableSetup(result.needsTableSetup);
-    } finally {
-      setLoadingData(false);
-    }
+    const result = await fetchAllEmployeesFromSupabase();
+    setEmployees(result.employees);
   }, []);
 
   useEffect(() => {
@@ -379,49 +364,6 @@ export default function App() {
           </button>
         </div>
       </header>
-
-      {/* Workspace Sub-Toolbar */}
-      <div className="bg-gradient-to-r from-slate-100 via-emerald-50/40 to-slate-100 dark:from-slate-900 dark:via-emerald-950/30 dark:to-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600 dark:text-slate-400 no-print">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-slate-800 dark:text-slate-200">
-            Office of the Deputy Commissioner, District Jhang
-          </span>
-          <span aria-hidden="true">·</span>
-          <span>Establishment, Revenue &amp; Ministerial Cadre</span>
-          <span aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-emerald-800 dark:text-emerald-400">
-            Supabase DB: qjoflyaxwffwzoodehod
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setIsGhModalOpen(true)}
-            className="px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors"
-          >
-            <GitBranch className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-            <span>GitHub Pages Auto-Deploy</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsSchemaModalOpen(true)}
-            className="px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-colors"
-          >
-            <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Supabase SQL Tables</span>
-          </button>
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loadingData}
-            className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-            <span>Sync</span>
-          </button>
-        </div>
-      </div>
 
       {/* Main Content */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 py-6 space-y-6">
@@ -958,18 +900,6 @@ export default function App() {
           Establishment Branch · HRA Branch · Revenue Wing · Tehsils Jhang, Shorkot, Ahmadpur Sial &amp; 18-Hazari
         </div>
       </footer>
-
-      {isSchemaModalOpen && (
-        <SupabaseSchemaModal
-          needsTableSetup={needsTableSetup}
-          onClose={() => setIsSchemaModalOpen(false)}
-          onRefreshConnection={loadData}
-        />
-      )}
-
-      {isGhModalOpen && (
-        <GitHubPagesModal onClose={() => setIsGhModalOpen(false)} />
-      )}
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
